@@ -10,7 +10,7 @@ enum ZombieInvasion
 
     GAMEOBJECT_BARRICADE    = 293610,
     GAMEOBJECT_ANVIL        = 293611,
-    GAMEOBJECT_SKELET       = 185437,
+    GAMEOBJECT_SKELETON     = 185437,
     GAMEOBJECT_POWER_UP     = 0,
 
     NPC_ZOMBIE              = 792130,
@@ -45,9 +45,6 @@ class npc_zombie_barricade_trigger : public CreatureScript
 
             void SpellHit(Unit* caster, SpellInfo const* spell)
             {
-                if (!caster)
-                    return;
-
                 if (caster->GetTypeId() == TYPEID_UNIT && (spell->Id == SPELL_ATTACK_1H) || (spell->Id == SPELL_ATTACK_2H))
                 {
                     ++hitCounter;
@@ -91,9 +88,6 @@ class npc_zombie_kill_counter : public CreatureScript
 
             void SpellHit(Unit* caster, SpellInfo const* spell)
             {
-                if (!caster)
-                    return;
-
                 if (caster->GetTypeId() == TYPEID_UNIT && spell->Id == SPELL_COUNTER)
                 {
                     ++killCounter;
@@ -172,11 +166,12 @@ class npc_zombie : public CreatureScript
                     DoCast(counter, SPELL_COUNTER);
 
                 DoCast(me, SPELL_ZOMBIE_DIES, true);
-                me->SummonGameObject(GAMEOBJECT_SKELET, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), 0, 0, 0, 0, 60000); // One minute
-                me->ForcedDespawn(2000); // We want all bodies to be removed when we die, but we also want the visual to be there
+                me->SummonGameObject(GAMEOBJECT_SKELETON, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), 0, 0, 0, 0, 60000); // One minute
 
                 if (urand(0, 9) == 0) // 10% chance
                     DoSpawnPowerUp();
+
+                me->ForcedDespawn(1000); // We want all bodies to be removed when we die, but we also want the visual to be there
             }
 
             void DoSpawnPowerUp()
@@ -203,9 +198,6 @@ class npc_zombie : public CreatureScript
 
             void SpellHit(Unit* caster, SpellInfo const* spell)
             {
-                if (!caster)
-                    return;
-
                 if (caster->GetTypeId() != TYPEID_UNIT)
                     return;
 
@@ -216,10 +208,7 @@ class npc_zombie : public CreatureScript
 
             void MovementInform(uint32 type, uint32 id)
             {
-                if (type != POINT_MOTION_TYPE)
-                    return;
-
-                if (id == 1)
+                if (type == POINT_MOTION_TYPE && id == 1)
                     atBarricade = true;
             }
 
