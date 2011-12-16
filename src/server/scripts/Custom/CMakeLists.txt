@@ -10,6 +10,7 @@
 
 set(scripts_STAT_SRCS
   ${scripts_STAT_SRCS}
+  Custom/Zombie_event.cpp
 )
 
 message("  -> Prepared: Custom")
