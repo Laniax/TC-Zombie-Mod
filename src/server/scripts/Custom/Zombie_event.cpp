@@ -529,5 +529,11 @@ void AddSC_()
 
 void AddSC_Zombie_event()
 {
-
+    new npc_zombie_barricade_trigger;
+    new npc_zombie;
+    new npc_bomb_bot;
+    new npc_zombie_kill_counter;
+    new npc_zombie_spawner;
+    new npc_proximity_mine;
+    new spell_repair_channel;
 }
