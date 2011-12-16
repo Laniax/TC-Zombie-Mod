@@ -171,7 +171,7 @@ class npc_zombie : public CreatureScript
                 if (urand(0, 9) == 0) // 10% chance
                     DoSpawnPowerUp();
 
-                me->ForcedDespawn(1000); // We want all bodies to be removed when we die, but we also want the visual to be there
+                me->ForcedDespawn(2000); // We want all bodies to be removed when we die, but we also want the visual to be there
             }
 
             void DoSpawnPowerUp()
