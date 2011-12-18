@@ -688,6 +688,8 @@ void WorldSession::HandleRaidReadyCheckOpcode(WorldPacket & recv_data)
         uint8 state;
         recv_data >> state;
 
+        group->SetReadyCheckState(GetPlayer()->GetGUID(), state);
+
         // everything's fine, do it
         WorldPacket data(MSG_RAID_READY_CHECK_CONFIRM, 9);
         data << uint64(GetPlayer()->GetGUID());

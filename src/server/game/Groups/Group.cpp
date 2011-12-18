@@ -58,7 +58,7 @@ Loot* Roll::getLoot()
 Group::Group() : m_leaderGuid(0), m_leaderName(""), m_groupType(GROUPTYPE_NORMAL),
 m_dungeonDifficulty(DUNGEON_DIFFICULTY_NORMAL), m_raidDifficulty(RAID_DIFFICULTY_10MAN_NORMAL),
 m_bgGroup(NULL), m_lootMethod(FREE_FOR_ALL), m_lootThreshold(ITEM_QUALITY_UNCOMMON), m_looterGuid(0),
-m_subGroupsCounts(NULL), m_guid(0), m_counter(0), m_maxEnchantingLevel(0), m_dbStoreId(0)
+m_subGroupsCounts(NULL), m_guid(0), m_counter(0), m_maxEnchantingLevel(0), m_dbStoreId(0), isReadyCheckFromNPC(false)
 {
     for (uint8 i = 0; i < TARGETICONCOUNT; ++i)
         m_targetIcons[i] = 0;
@@ -2068,3 +2068,31 @@ void Group::ToggleGroupMemberFlag(member_witerator slot, uint8 flag, bool apply)
         slot->flags &= ~flag;
 }
 
+void Group::SetReadyCheckState(uint64 guid, uint8 accepted)
+{
+    playerReadyCheck[guid] = accepted;
+}
+
+void Group::ResetReadyCheckState()
+{
+    playerReadyCheck.clear();
+}
+
+bool Group::GetReadyCheckState()
+{
+    bool result = true;
+
+    for (GroupReference* itr = GetFirstMember(); itr != NULL; itr = itr->next())
+    {
+        Player* member = itr->getSource();
+        if (!member)
+            continue;
+
+        PlayerReadyCheck::iterator itrlol = playerReadyCheck.find(member->GetGUID());
+        if (itrlol != playerReadyCheck.end())
+            if (!itrlol->second)
+                result = false;
+    }
+
+    return result;
+}
