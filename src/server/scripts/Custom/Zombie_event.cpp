@@ -87,8 +87,6 @@ Position const ZombieSpawnPoints[MAX_SPAWNPOINTS] =
     {158.301880f, 134.723984f, 99.867416f, 1.750798f},
 };
 
-uint64 zombieSpawnerGUID = 0;
-
 class npc_zombie_barricade_trigger : public CreatureScript
 {
     public:
@@ -303,7 +301,8 @@ class npc_zombie_spawner : public CreatureScript
         {
             npc_zombie_spawnerAI(Creature* creature) : ScriptedAI(creature)
             {
-                zombieSpawnerGUID = creature->GetGUID();
+                for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
+                    canSpawn[i] = true;
             }
  
             uint32 summonTimer;
@@ -312,8 +311,6 @@ class npc_zombie_spawner : public CreatureScript
             void Reset()
             {
                 summonTimer = 15000;
-                for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
-                    canSpawn[i] = true;
             }
  
             void StopSpawning(uint8 spawnPoint)
@@ -371,16 +368,17 @@ class npc_zombie_spawnpoint : public CreatureScript
 
             void SpellHit(Unit* caster, SpellInfo const* spell)
             {
-                if (caster->GetTypeId() != TYPEID_UNIT || !zombieSpawnerGUID)
+                if (caster->GetTypeId() != TYPEID_UNIT)
                     return;
 
                 if (spell->Id == SPELL_KILL_SPAWNPOINT)
                 {
                     for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
                     {
-                        if (ZombieSpawnPoints[i].GetPositionX() == me->GetPositionX())
+                        if (floor(ZombieSpawnPoints[i].GetPositionX()) == floor(me->GetPositionX())
+                            && floor(ZombieSpawnPoints[i].GetPositionY()) == floor(me->GetPositionY()))
                         {
-                            if (Creature* spawner = me->GetMap()->GetCreature(zombieSpawnerGUID))
+                            if (Creature* spawner = me->FindNearestCreature(NPC_SPAWNER, 200.0f, true))
                                 if (SpawnerAI* spawnerAI = CAST_AI(SpawnerAI, spawner->AI()))
                                     spawnerAI->StopSpawning(i);
                         }
