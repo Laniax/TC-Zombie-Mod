@@ -3002,6 +3002,9 @@ void SpellMgr::LoadDbcDataCorrections()
             case 59372: // Energize Cores
                 spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_SRC_AREA_ENEMY;
                 break;
+            case 71250:
+                spellInfo->EffectImplicitTargetA[0] = TARGET_UNIT_CONE_ENTRY;
+                break;
             case 8494: // Mana Shield (rank 2)
                 // because of bug in dbc
                 spellInfo->procChance = 0;

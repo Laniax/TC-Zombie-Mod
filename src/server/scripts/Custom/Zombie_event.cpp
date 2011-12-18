@@ -20,32 +20,74 @@
 <TODO>
 */
 
-enum ZombieInvasion
+#include "ScriptPCH.h"
+
+enum ZombieSpells
 {
+    // Zombie
     SPELL_ATTACK_1H         = 42880,
     SPELL_ATTACK_2H         = 42904,
     SPELL_EMERGE_VISUAL     = 50142,
     SPELL_ZOMBIE_DIES       = 61454,
+
+    // Kill counter
     SPELL_COUNTER           = 18282,
+
+    // Boom bot, Mine
     SPELL_EXPLODE           =  7670, // Used by Bomb Bot
     SPELL_EXPLODE_2         = 71495, // Used by Proximity Mine - triggers knockback (40191)
-    SPELL_FLAME_BREATH      = 49161,
 
+    // Spawnpoint
+    SPELL_KILL_SPAWNPOINT   = 60861,
+
+    // Zombie Turret
+    SPELL_RAPID_FIRE        = 71250,
+
+    // Unused
+    SPELL_FLAME_BREATH      = 49161,
+};
+
+enum ZombieGameobjects
+{
     GAMEOBJECT_BARRICADE    = 293610,
     GAMEOBJECT_ANVIL        = 293611,
     GAMEOBJECT_SKELETON     = 185437,
     GAMEOBJECT_POWER_UP     = 0,
+};
 
+enum ZombieCreatures
+{
     NPC_ZOMBIE              = 792130,
     NPC_COUNTER             = 792131,
     NPC_SPAWNER             = 792132,
-    NPC_BARRICADE_TRIGGER   = 792133,
-    NPC_TURRET_P1           = 792134,
-    NPC_TURRET_P2           = 792135,
-    NPC_BOMB_BOT            = 792136,
-    NPC_PROXIMITY_MINE      = 792137,
+    NPC_SPAWNPOINT          = 792133,
+    NPC_BARRICADE_TRIGGER   = 792134,
+    NPC_TURRET_P1           = 792135,
+    NPC_TURRET_P2           = 792136,
+    NPC_BOMB_BOT            = 792137,
     NPC_COCKROACH           = 792138,
 };
+
+enum ZombieEvents
+{
+    // Zombie Turret
+    EVENT_FIRE_CANNON      = 1,
+};
+
+uint32 const MAX_SPAWNPOINTS = 8;
+Position const ZombieSpawnPoints[MAX_SPAWNPOINTS] =
+{
+    {136.054184f, 201.700638f, 95.039246f, 4.680336f},
+    {156.154419f, 201.463287f, 98.452942f, 4.246449f},
+    {121.992653f, 200.666763f, 98.161942f, 4.664613f},
+    {107.410492f, 199.340973f, 96.184494f, 4.821693f},
+    {107.863098f, 133.579697f, 97.949394f, 1.482956f},
+    {123.680313f, 132.347824f, 97.240753f, 1.570144f},
+    {138.114655f, 132.511612f, 97.275185f, 1.542667f},
+    {158.301880f, 134.723984f, 99.867416f, 1.750798f},
+};
+
+uint64 zombieSpawnerGUID = 0;
 
 class npc_zombie_barricade_trigger : public CreatureScript
 {
@@ -179,7 +221,6 @@ class npc_zombie : public CreatureScript
             {
                 attackBarricadeTimer = 3500;
 
-                DoCast(SPELL_EMERGE_VISUAL);
                 me->SetReactState(REACT_PASSIVE); // Not putting this up there so we can cancel it when a bracket is down
             }
 
@@ -238,10 +279,12 @@ class npc_zombie : public CreatureScript
             void UpdateAI(uint32 const diff)
             {
                 if (atBarricade)
+                {
                     if (attackBarricadeTimer <= diff)
                         DoCast(RAND(SPELL_ATTACK_1H, SPELL_ATTACK_2H));
                     else
                         attackBarricadeTimer -= diff;
+                }
             }
         };
 
@@ -255,36 +298,100 @@ class npc_zombie_spawner : public CreatureScript
 {
     public:
         npc_zombie_spawner() : CreatureScript("npc_zombie_spawner") { }
-
+ 
         struct npc_zombie_spawnerAI : public ScriptedAI
         {
-            npc_zombie_spawnerAI(Creature* creature) : ScriptedAI(creature) { }
-
+            npc_zombie_spawnerAI(Creature* creature) : ScriptedAI(creature)
+            {
+                zombieSpawnerGUID = creature->GetGUID();
+            }
+ 
             uint32 summonTimer;
-
-            bool pointOne;
-            bool pointTwo;
-            bool pointThree;
-            bool pointFour;
-            bool pointFive;
-
+            bool canSpawn[MAX_SPAWNPOINTS];
+ 
             void Reset()
             {
                 summonTimer = 15000;
+                for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
+                    canSpawn[i] = true;
             }
-
+ 
+            void StopSpawning(uint8 spawnPoint)
+            {
+                canSpawn[spawnPoint] = false;
+            }
+ 
+            void DoSpawnZombies()
+            {
+                for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
+                {
+                    if (!canSpawn[i])
+                        continue;
+ 
+                    float x = ZombieSpawnPoints[i].GetPositionX() + irand(-4, 4);
+                    float y = ZombieSpawnPoints[i].GetPositionY() + irand(-4, 4);
+                    float z = ZombieSpawnPoints[i].GetPositionZ();
+                    float ground_Z = me->GetMap()->GetHeight(x, y, z, true, MAX_FALL_DISTANCE);
+                    if (fabs(ground_Z - z) < 0.1f)
+                        z = ground_Z;
+ 
+                    if (Creature* zombie = me->SummonCreature(NPC_ZOMBIE, x, y, z, ZombieSpawnPoints[i].GetOrientation(), TEMPSUMMON_MANUAL_DESPAWN))
+                        zombie->CastSpell(zombie, SPELL_EMERGE_VISUAL, false);
+                }
+            }
+ 
             void UpdateAI(uint32 const diff)
             {
                 if (summonTimer <= diff)
-                    me->SummonCreature(NPC_ZOMBIE, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), TEMPSUMMON_MANUAL_DESPAWN, 0);
+                {
+                    DoSpawnZombies();
+                    summonTimer = 15000;
+                }
                 else
                     summonTimer -= diff;
+            }
+        };
+ 
+        CreatureAI* GetAI(Creature* creature) const
+        {
+            return new npc_zombie_spawnerAI(creature);
+        }
+};
+
+typedef npc_zombie_spawner::npc_zombie_spawnerAI SpawnerAI;
+
+class npc_zombie_spawnpoint : public CreatureScript
+{
+    public:
+        npc_zombie_spawnpoint() : CreatureScript("npc_zombie_spawnpoint") { }
+
+        struct npc_zombie_spawnpointAI : public ScriptedAI
+        {
+            npc_zombie_spawnpointAI(Creature* creature) : ScriptedAI(creature) { }
+
+            void SpellHit(Unit* caster, SpellInfo const* spell)
+            {
+                if (caster->GetTypeId() != TYPEID_UNIT || !zombieSpawnerGUID)
+                    return;
+
+                if (spell->Id == SPELL_KILL_SPAWNPOINT)
+                {
+                    for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
+                    {
+                        if (ZombieSpawnPoints[i].GetPositionX() == me->GetPositionX())
+                        {
+                            if (Creature* spawner = me->GetMap()->GetCreature(zombieSpawnerGUID))
+                                if (SpawnerAI* spawnerAI = CAST_AI(SpawnerAI, spawner->AI()))
+                                    spawnerAI->StopSpawning(i);
+                        }
+                    }
+                }
             }
         };
 
         CreatureAI* GetAI(Creature* creature) const
         {
-            return new npc_zombie_spawnerAI(creature);
+            return new npc_zombie_spawnpointAI(creature);
         }
 };
 
@@ -366,6 +473,41 @@ class npc_bomb_bot : public CreatureScript
         }
 };
 
+class npc_zombie_turret : public CreatureScript
+{
+    public:
+        npc_zombie_turret() : CreatureScript("npc_zombie_turret") { }
+
+        struct npc_zombie_turretAI : public Scripted_NoMovementAI
+        {
+            npc_zombie_turretAI(Creature* creature) : Scripted_NoMovementAI(creature)
+            {
+                me->SetReactState(REACT_PASSIVE);
+                _events.Reset();
+                _events.ScheduleEvent(EVENT_FIRE_CANNON, 1000);
+            }
+
+            void UpdateAI(uint32 const diff)
+            {
+                _events.Update(diff);
+
+                if (_events.ExecuteEvent() == EVENT_FIRE_CANNON)
+                {
+                    me->CastSpell((Unit*)NULL, SPELL_RAPID_FIRE, false);
+                    _events.ScheduleEvent(EVENT_FIRE_CANNON, 5000);
+                }
+            }
+
+        private:
+            EventMap _events;
+        };
+
+        CreatureAI* GetAI(Creature* creature) const
+        {
+            return new npc_zombie_turretAI(creature);
+        }
+};
+
 class spell_repair_channel : public SpellScriptLoader
 {
     public:
@@ -383,22 +525,13 @@ class spell_repair_channel : public SpellScriptLoader
                     return;
 
                 if (GameObject* barricade = player->FindNearestGameObject(GAMEOBJECT_BARRICADE, 100.0f))
-                //if (GameObject* barricade = ObjectAccessor::GetGameobject(*GetCaster(), InstanceScript->GetData64(DATA_BARRIER)))
-                {
-                    sLog->outString("first");
-                    if (GameObject* anvil = player->FindNearestGameObject(GAMEOBJECT_ANVIL, 100.0f))
-                    //if (GameObject* anvil = ObjectAccessor::GetGameobject(*GetCaster(), InstanceScript->GetData64(DATA_ANVIL)))
-                    {
-                        sLog->outString("second");
-                        if (Creature* barricadeTrigger = player->FindNearestCreature(NPC_BARRICADE_TRIGGER, 100.0f, false))
-                        {
-                            sLog->outString("third");
-                            barricade->SetRespawnTime(0);
-                            barricadeTrigger->Respawn(true);
-                            anvil->DeleteFromDB();
-                        }
-                    }
-                }
+                    barricade->SetRespawnTime(0);
+
+                if (GameObject* anvil = player->FindNearestGameObject(GAMEOBJECT_ANVIL, 100.0f))
+                    anvil->DeleteFromDB();
+
+                if (Creature* barricadeTrigger = player->FindNearestCreature(NPC_BARRICADE_TRIGGER, 100.0f, false))
+                    barricadeTrigger->Respawn(true);
             }
 
             void Register()
@@ -410,6 +543,52 @@ class spell_repair_channel : public SpellScriptLoader
         AuraScript* GetAuraScript() const
         {
             return new spell_repair_channel_AuraScript();
+        }
+};
+
+class ZombieEntryCheck
+{
+    public:
+        ZombieEntryCheck() {}
+
+        bool operator()(Unit* unit) const
+        {
+            if (unit->GetTypeId() == TYPEID_PLAYER)
+                return true;
+
+            if (!unit->isAlive())
+                return true;
+
+            return unit->GetEntry() != NPC_ZOMBIE;
+        }
+};
+
+class spell_zombie_rapid_fire : public SpellScriptLoader
+{
+    public:
+        spell_zombie_rapid_fire() : SpellScriptLoader("spell_zombie_rapid_fire") { }
+
+        class spell_zombie_rapid_fire_SpellScript : public SpellScript
+        {
+            PrepareSpellScript(spell_zombie_rapid_fire_SpellScript);
+
+            void SelectTarget(std::list<Unit*>& unitList)
+            {
+                if (unitList.empty())
+                    return;
+
+                unitList.remove_if(ZombieEntryCheck());
+            }
+
+            void Register()
+            {
+                OnUnitTargetSelect += SpellUnitTargetFn(spell_zombie_rapid_fire_SpellScript::SelectTarget, EFFECT_0, TARGET_UNIT_CONE_ENTRY);
+            }
+        };
+
+        SpellScript* GetSpellScript() const
+        {
+            return new spell_zombie_rapid_fire_SpellScript();
         }
 };
 
@@ -541,11 +720,14 @@ void AddSC_()
 
 void AddSC_Zombie_event()
 {
-    new npc_zombie_barricade_trigger;
-    new npc_zombie;
-    new npc_bomb_bot;
-    new npc_zombie_kill_counter;
-    new npc_zombie_spawner;
-    new npc_proximity_mine;
-    new spell_repair_channel;
+    new npc_zombie_barricade_trigger();
+    new npc_zombie();
+    new npc_bomb_bot();
+    new npc_zombie_kill_counter();
+    new npc_zombie_spawner();
+    new npc_zombie_spawnpoint();
+    new npc_proximity_mine();
+    new npc_zombie_turret();
+    new spell_repair_channel();
+    new spell_zombie_rapid_fire();
 }
