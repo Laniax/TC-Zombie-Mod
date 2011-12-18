@@ -20,7 +20,10 @@
 <TODO>
 */
 
+#include "WorldSocket.h"
 #include "ScriptPCH.h"
+#include "Group.h"
+#include "WorldPacket.h"
 
 enum ZombieSpells
 {
@@ -66,6 +69,7 @@ enum ZombieCreatures
     NPC_TURRET_P2           = 792136,
     NPC_BOMB_BOT            = 792137,
     NPC_COCKROACH           = 792138,
+    NPC_ASSHAT              = 792139,
 };
 
 enum ZombieEvents
@@ -590,10 +594,9 @@ class spell_zombie_rapid_fire : public SpellScriptLoader
         }
 };
 
-/*
 enum Actions
 {
-    ACTION_TELEPORT_GROUP = 1;
+    ACTION_TELEPORT_GROUP = 1,
 };
 
 class custom_mr_asshat : public CreatureScript
@@ -609,7 +612,7 @@ class custom_mr_asshat : public CreatureScript
                 return false;
 
             if (group->IsLeader(player->GetGUID()) && !group->isLFGGroup())
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_DOT, GOSSIP_ITEM_PARTICIPATE, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_DOT, "Is Discovered a bitch?", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
 
             player->SEND_GOSSIP_MENU(player->GetGossipTextId(creature), creature->GetGUID());
 
@@ -624,7 +627,7 @@ class custom_mr_asshat : public CreatureScript
             Group* group = player->GetGroup();
 
             // If the player disbandon/leaves group during OnGossipHello
-            if (!group || HasRecentlyReadyCheck)
+            if (!group) // || HasRecentlyReadyCheck)
                 return false;
 
             if (action == GOSSIP_ACTION_INFO_DEF + 1)
@@ -638,8 +641,8 @@ class custom_mr_asshat : public CreatureScript
                         member->GetSession()->SendPacket(&data);
                     }
                 }
-                HasRecentlyReadyCheck = true;
-                ReadyCheckTimer = 30000;
+                //HasRecentlyReadyCheck = true;
+                //ReadyCheckTimer = 30000;
             }
 
             return true;
@@ -650,19 +653,22 @@ class custom_mr_asshat : public CreatureScript
             custom_mr_asshatAI(Creature* creature) : ScriptedAI(creature)
             {
                 me->SetReactState(REACT_PASSIVE);
-                ReadyCheckTimer = 0;
-                HasRecentlyReadyCheck = false;
+                //ReadyCheckTimer = 0;
+                //HasRecentlyReadyCheck = false;
             }
+
+            //bool HasRecentlyReadyCheck;
+            //uint32 ReadyCheckTimer;
 
             void DoAction(int32 const action)
             {
-                if (action != ACTION_TELEPORT_GROUP || !HasRecentlyReadyCheck)
+                if (action != ACTION_TELEPORT_GROUP) // || !HasRecentlyReadyCheck)
                     return;
 
-                DoTeleportAll(x, y, z, o);
+                DoTeleportAll(136.054184f, 201.700638f, 95.039246f, 4.680336f);
             }
 
-            void UpdateAI(uint32 const diff)
+            /*void UpdateAI(uint32 const diff)
             {
                 if (!HasRecentlyReadyCheck)
                     return;
@@ -672,11 +678,8 @@ class custom_mr_asshat : public CreatureScript
                     HasRecentlyReadyCheck = false;
                 else
                     ReadyCheckTimer -= diff;
-            }
+            }*/
         };
-
-        bool HasRecentlyReadyCheck;
-        uint32 ReadyCheckTimer;
 
         CreatureAI* GetAI(Creature* creature) const
         {
@@ -687,34 +690,24 @@ class custom_mr_asshat : public CreatureScript
 class custom_serverscript : public ServerScript
 {
     public:
-        custom_serverscript() : ServerScript("woho") { }
+        custom_serverscript() : ServerScript("SHIT SERVER") { }
 
         void OnPacketReceive(WorldSocket* socket, WorldPacket& packet)
         {
-            if (GetOpcode() == MSG_RAID_READY_CHECK_FINISHED)
+            if (packet.GetOpcode() == MSG_RAID_READY_CHECK_FINISHED)
             {
+                sLog->outError("hallo there");
                 Player* player = socket->GetSession()->GetPlayer();
 
                 // Check to make it faster
                 if (!player || player->GetMapId() != 289)
                     return;
 
-                InstanceScript* instance = player->GetInstanceScript();
-
-                if (!instance)
-                    return;
-
-                if (Creature* creature = sObjectAccessor->GetCreature(*player, instance->GetData64(DATA_MR_ASSHAT))) // DATA_MR_ASSHAT returns the guid of mr asshat
-                    creature->GetAI()->DoAction(ACTION_TELEPORT_GROUP);
+                if (Creature* asshat = player->FindNearestCreature(NPC_ASSHAT, 500.0f, true))
+                    asshat->AI()->DoAction(ACTION_TELEPORT_GROUP);
             }
         }
 };
-
-void AddSC_()
-{
-    new custom_mr_asshat();
-}
-*/
 
 void AddSC_Zombie_event()
 {
@@ -728,4 +721,6 @@ void AddSC_Zombie_event()
     new npc_zombie_turret();
     new spell_repair_channel();
     new spell_zombie_rapid_fire();
+
+    new custom_mr_asshat();
 }
