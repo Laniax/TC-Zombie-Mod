@@ -172,6 +172,7 @@ class Group
         typedef MemberSlotList::const_iterator member_citerator;
 
         typedef UNORDERED_MAP< uint32 /*mapId*/, InstanceGroupBind> BoundInstancesMap;
+        typedef std::map<uint64, bool> PlayerReadyCheck;
     protected:
         typedef MemberSlotList::iterator member_witerator;
         typedef std::set<Player*> InvitesList;
@@ -301,6 +302,12 @@ class Group
         // FG: evil hacks
         void BroadcastGroupUpdate(void);
 
+        void SetReadyCheckState(uint64 guid, uint8 accepted);
+        void ResetReadyCheckState();
+        bool GetReadyCheckState();
+        bool ReadyCheckFromNPC() { return isReadyCheckFromNPC; }
+        void SetReadyCheckFromNPC(bool apply) { isReadyCheckFromNPC = apply; }
+
     protected:
         bool _setMembersGroup(uint64 guid, uint8 group);
         void _homebindIfInstance(Player* player);
@@ -332,5 +339,7 @@ class Group
         uint32              m_counter;                      // used only in SMSG_GROUP_LIST
         uint32              m_maxEnchantingLevel;
         uint32              m_dbStoreId;                    // Represents the ID used in database (Can be reused by other groups if group was disbanded)
+        PlayerReadyCheck    playerReadyCheck;
+        bool                isReadyCheckFromNPC;
 };
 #endif

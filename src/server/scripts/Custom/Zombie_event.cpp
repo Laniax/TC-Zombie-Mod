@@ -611,15 +611,14 @@ class custom_mr_asshat : public CreatureScript
             if (!group)
                 return false;
 
-            if (group->IsLeader(player->GetGUID()) && !group->isLFGGroup())
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_DOT, "Is Discovered a bitch?", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+            if (group->IsLeader(player->GetGUID()))
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Do you wish to start the Zombie event of doom and destruction and neverending pain?", 631, GOSSIP_ACTION_INFO_DEF + 1);
 
             player->SEND_GOSSIP_MENU(player->GetGossipTextId(creature), creature->GetGUID());
-
             return true;
         }
 
-        bool OnGossipSelect(Player* player, Creature* creature, uint32 sender, uint32 action)
+        bool OnGossipSelect(Player* player, Creature* creature, uint32 /*sender*/, uint32 action)
         {
             player->PlayerTalkClass->ClearMenus();
             player->CLOSE_GOSSIP_MENU();
@@ -627,7 +626,7 @@ class custom_mr_asshat : public CreatureScript
             Group* group = player->GetGroup();
 
             // If the player disbandon/leaves group during OnGossipHello
-            if (!group) // || HasRecentlyReadyCheck)
+            if (!group)
                 return false;
 
             if (action == GOSSIP_ACTION_INFO_DEF + 1)
@@ -641,49 +640,10 @@ class custom_mr_asshat : public CreatureScript
                         member->GetSession()->SendPacket(&data);
                     }
                 }
-                //HasRecentlyReadyCheck = true;
-                //ReadyCheckTimer = 30000;
+                group->SetReadyCheckFromNPC(true);
             }
 
             return true;
-        }
-
-        struct custom_mr_asshatAI : public ScriptedAI // to be able to access DoTeleportAll
-        {
-            custom_mr_asshatAI(Creature* creature) : ScriptedAI(creature)
-            {
-                me->SetReactState(REACT_PASSIVE);
-                //ReadyCheckTimer = 0;
-                //HasRecentlyReadyCheck = false;
-            }
-
-            //bool HasRecentlyReadyCheck;
-            //uint32 ReadyCheckTimer;
-
-            void DoAction(int32 const action)
-            {
-                if (action != ACTION_TELEPORT_GROUP) // || !HasRecentlyReadyCheck)
-                    return;
-
-                DoTeleportAll(136.054184f, 201.700638f, 95.039246f, 4.680336f);
-            }
-
-            /*void UpdateAI(uint32 const diff)
-            {
-                if (!HasRecentlyReadyCheck)
-                    return;
-
-                // Reset the boolean if the 30 sec timer passed
-                if (ReadyCheckTimer <= diff)
-                    HasRecentlyReadyCheck = false;
-                else
-                    ReadyCheckTimer -= diff;
-            }*/
-        };
-
-        CreatureAI* GetAI(Creature* creature) const
-        {
-            return new custom_mr_asshatAI(creature);
         }
 };
 
@@ -696,15 +656,25 @@ class custom_serverscript : public ServerScript
         {
             if (packet.GetOpcode() == MSG_RAID_READY_CHECK_FINISHED)
             {
-                sLog->outError("hallo there");
                 Player* player = socket->GetSession()->GetPlayer();
-
-                // Check to make it faster
-                if (!player || player->GetMapId() != 289)
+                if (!player)
                     return;
 
-                if (Creature* asshat = player->FindNearestCreature(NPC_ASSHAT, 500.0f, true))
-                    asshat->AI()->DoAction(ACTION_TELEPORT_GROUP);
+                Group* group = player->GetGroup();
+                if (!group)
+                    return;
+
+                if (group->ReadyCheckFromNPC() && group->GetReadyCheckState())
+                {
+                    for (GroupReference* itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
+                    {
+                        if (Player* member = itr->getSource())
+                            member->TeleportTo(289, 136.054184f, 201.700638f, 95.039246f, 4.680336f, TELE_TO_NOT_UNSUMMON_PET);
+                    }
+                }
+
+                group->ResetReadyCheckState();
+                group->SetReadyCheckFromNPC(false);
             }
         }
 };
@@ -721,6 +691,6 @@ void AddSC_Zombie_event()
     new npc_zombie_turret();
     new spell_repair_channel();
     new spell_zombie_rapid_fire();
-
+    new custom_serverscript();
     new custom_mr_asshat();
 }
