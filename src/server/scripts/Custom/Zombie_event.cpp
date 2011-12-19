@@ -122,6 +122,7 @@ class npc_zombie : public CreatureScript
                 attemptSpawnPowerUp = false;
                 me->SetReactState(REACT_PASSIVE); // Not putting this up there so we can cancel it when a barricade is down
                 zombieMovementSpeed = 1.0f;
+                atBarricade = false;
             }
 
             void JustDied(Unit* /*killer*/)
@@ -159,12 +160,18 @@ class npc_zombie : public CreatureScript
             void IsSummonedBy(Unit* /*summoner*/)
             {
                 // zombie speed is slightly increased each wave
-                me->SetSpeed(MOVE_RUN, me->GetSpeed(MOVE_RUN) * zombieMovementSpeed, true);
-                me->SetSpeed(MOVE_WALK, me->GetSpeed(MOVE_WALK) * zombieMovementSpeed, true);
+                me->SetSpeed(MOVE_RUN, zombieMovementSpeed, true);
+                me->SetSpeed(MOVE_WALK, zombieMovementSpeed, true);
 
-                if (me->FindNearestGameObject(GAMEOBJECT_BARRICADE, 50.0f))
-                    if (Creature* barricadeTrigger = me->FindNearestCreature(NPC_BARRICADE_TRIGGER, 100.0f, true))
+                if (me->FindNearestGameObject(GAMEOBJECT_BARRICADE, 200.0f))
+                    if (Creature* barricadeTrigger = me->FindNearestCreature(NPC_BARRICADE_TRIGGER, 200.0f, true))
                         me->GetMotionMaster()->MovePoint(1, barricadeTrigger->GetPositionX()+3, barricadeTrigger->GetPositionY(), barricadeTrigger->GetPositionZ());
+            }
+
+            void MovementInform(uint32 type, uint32 id)
+            {
+                if (type == POINT_MOTION_TYPE && id == 1)
+                    atBarricade = true;
             }
 
             void SpellHit(Unit* caster, SpellInfo const* spell)
@@ -177,10 +184,8 @@ class npc_zombie : public CreatureScript
                     me->Kill(me);
             }
 
-            void MovementInform(uint32 type, uint32 id)
+            void EnterEvadeMode()
             {
-                if (type == POINT_MOTION_TYPE && id == 1)
-                    atBarricade = true;
             }
 
             void UpdateAI(uint32 const diff)
@@ -188,7 +193,10 @@ class npc_zombie : public CreatureScript
                 if (atBarricade)
                 {
                     if (attackBarricadeTimer <= diff)
+                    {
                         DoCast(RAND(SPELL_ATTACK_1H, SPELL_ATTACK_2H));
+                        attackBarricadeTimer = 3500;
+                    }
                     else
                         attackBarricadeTimer -= diff;
                 }
@@ -327,32 +335,32 @@ class npc_zombie_kill_counter : public CreatureScript
                 killsForWaveEnding = 20; // first wave will always start with 20 zombies
             }
 
-            void DespawnTurrets(bool all);
-            void DespawnTurrets(bool all, enum ZombieCreatures Turret)
+            void DespawnTurrets(bool all)
+            //void DespawnTurrets(bool all, enum ZombieCreatures Turret)
             {
                 if (all)
                 {
                     // NPC_TURRET_P1
                     std::list<Creature*> TurretList1; 
-                    GetCreatureListWithEntryInGrid(TurretList1, me, NPC_TURRET_P1, 100.0f);
+                    GetCreatureListWithEntryInGrid(TurretList1, me, NPC_TURRET_P1, 200.0f);
                     for (std::list<Creature*>::iterator itr = TurretList1.begin(); itr != TurretList1.end(); ++itr)
                         (*itr)->ForcedDespawn();
 
                     // NPC_TURRET_P2
                     std::list<Creature*> TurretList2;
-                    GetCreatureListWithEntryInGrid(TurretList2, me, NPC_TURRET_P2, 100.0f);
+                    GetCreatureListWithEntryInGrid(TurretList2, me, NPC_TURRET_P2, 200.0f);
                     for (std::list<Creature*>::iterator itr = TurretList2.begin(); itr != TurretList2.end(); ++itr)
                         (*itr)->ForcedDespawn();
 
                 }
 
-                if (Turret)
+                /*if (Turret)
                 {
                     std::list<Creature*> TurretList;
                     GetCreatureListWithEntryInGrid(TurretList, me, Turret, 100.0f);
                     for (std::list<Creature*>::iterator itr = TurretList.begin(); itr != TurretList.end(); ++itr)
                         (*itr)->ForcedDespawn();
-                }
+                }*/
             }
 
             void StopSpawningZombies()
@@ -478,14 +486,12 @@ class npc_proximity_mine : public CreatureScript
 
             void MoveInLineOfSight(Unit* who)
             {
-                if (!who || who->GetEntry() != NPC_ZOMBIE)
+                if (!who || who->GetEntry() != NPC_ZOMBIE || !me->IsWithinDist(who, 1.5f))
                     return;
 
-                if (me->GetMapId() == 289 && me->IsWithinDist(who, 1.5f))
-                {
-                    DoCast(who, SPELL_EXPLODE_2, true);
-                    me->ForcedDespawn();
-                }
+                DoCast(who, SPELL_EXPLODE_2, true);
+                //who->Kill(who);
+                me->ForcedDespawn();
             }
         };
 
@@ -506,33 +512,26 @@ class npc_bomb_bot : public CreatureScript
 
             uint32 explodeTimer;
 
-            bool isFollowing;
-
             void Reset()
             {
                 explodeTimer = 10000;
-                isFollowing = false;
 
                 // Or do we want to make it move random and then explode?
                 if (Creature* zombie = me->FindNearestCreature(NPC_ZOMBIE, 30.0f, true))
-                {
-                    me->GetMotionMaster()->MoveFollow(zombie, 1.0f, 1.0f);
-                    isFollowing = true;
-                }
+                    me->GetMotionMaster()->MoveFollow(zombie, 2.0f, (M_PI / 2));
+                else
+                    me->ForcedDespawn(); // Our purpose is useless
             }
 
             void UpdateAI(uint32 const diff)
             {
-                if (isFollowing)
+                if (explodeTimer <= diff)
                 {
-                    if (explodeTimer <= diff)
-                    {
-                        DoCast(SPELL_EXPLODE);
-                        me->ForcedDespawn();
-                    }
-                    else
-                        explodeTimer -= diff;
+                    DoCast(SPELL_EXPLODE);
+                    me->ForcedDespawn();
                 }
+                else
+                    explodeTimer -= diff;
             }
         };
 
