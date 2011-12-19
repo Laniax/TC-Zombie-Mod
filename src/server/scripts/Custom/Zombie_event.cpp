@@ -660,26 +660,28 @@ class spell_zombie_rapid_fire : public SpellScriptLoader
         }
 };
 
-enum Actions
-{
-    ACTION_TELEPORT_GROUP = 1,
-};
-
-class custom_mr_asshat : public CreatureScript
+class npc_zombie_teleporter : public CreatureScript
 {
     public:
-        custom_mr_asshat() : CreatureScript("custom_mr_asshat") { }
+        npc_zombie_teleporter() : CreatureScript("npc_zombie_teleporter") { }
 
         bool OnGossipHello(Player* player, Creature* creature)
         {
             Group* group = player->GetGroup();
 
             if (!group)
-                return false;
+            {
+                player->SEND_GOSSIP_MENU(56001, creature->GetGUID());
+                return true;
+            }
 
-            if (group->IsLeader(player->GetGUID()))
-                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, "Do you wish to start the Zombie event of doom and destruction and neverending pain?", 631, GOSSIP_ACTION_INFO_DEF + 1);
+            if (!group->IsLeader(player->GetGUID()))
+            {
+                player->SEND_GOSSIP_MENU(56002, creature->GetGUID());
+                return true;
+            }
 
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_BATTLE, "Teleport me to Schomance", 631, GOSSIP_ACTION_INFO_DEF + 1);
             player->SEND_GOSSIP_MENU(player->GetGossipTextId(creature), creature->GetGUID());
             return true;
         }
@@ -759,5 +761,5 @@ void AddSC_Zombie_event()
     new spell_repair_channel();
     new spell_zombie_rapid_fire();
     new custom_serverscript();
-    new custom_mr_asshat();
+    new npc_zombie_teleporter();
 }
