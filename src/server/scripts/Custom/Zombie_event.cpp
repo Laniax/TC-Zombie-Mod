@@ -159,6 +159,9 @@ class npc_zombie : public CreatureScript
                 }
             }
 
+            // This is so the zombie won't return to its homeposition on evade/reset/etc.
+            void EnterEvadeMode() { }
+
             void IsSummonedBy(Unit* /*summoner*/)
             {
                 // Zombie movement speed is slightly increased each wave
@@ -415,7 +418,7 @@ class npc_zombie_kill_counter : public CreatureScript
                     }
                     else
                     {
-                        // Don't spawn powerups when during switching of waves
+                        // Don't spawn powerups when switching waves
                         if (zombieAI)
                             zombieAI->attemptSpawnPowerUp = true; 
                     }
@@ -719,7 +722,7 @@ class npc_zombie_teleporter : public CreatureScript
 class zombie_mod_serverscript : public ServerScript
 {
     public:
-        zombie_mod_serverscript() : ServerScript("Serverscript") { } // Add the name of your realm here
+        zombie_mod_serverscript() : ServerScript("Serverscript") { }
 
         void OnPacketReceive(WorldSocket* socket, WorldPacket& packet)
         {
