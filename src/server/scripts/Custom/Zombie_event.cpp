@@ -579,6 +579,30 @@ class npc_zombie_turret : public CreatureScript
         }
 };
 
+class go_zombie_teleport_away : public GameObjectScript
+{
+    public:
+        go_zombie_teleport_away() : GameObjectScript("go_zombie_teleport_away") { }
+
+        bool OnGossipHello(Player* player, GameObject* go)
+        {
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT,"I want to teleport away from here", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+            player->SEND_GOSSIP_MENU(56003, go->GetGUID());
+            return true;
+        }
+
+        bool OnGossipSelect(Player* player, GameObject* go, uint32 /*sender*/, uint32 action)
+        {
+            player->PlayerTalkClass->ClearMenus();
+
+            if (action == GOSSIP_ACTION_INFO_DEF + 1)
+            {
+                player->TeleportTo(player->m_homebindMapId, player->m_homebindX, player->m_homebindY, player->m_homebindZ, player->GetOrientation());
+            }
+            return true;
+        }
+};
+
 class spell_repair_channel : public SpellScriptLoader
 {
     public:
@@ -765,4 +789,5 @@ void AddSC_Zombie_event()
     new spell_zombie_rapid_fire();
     new zombie_mod_serverscript();
     new npc_zombie_teleporter();
+    new go_zombie_teleport_away();
 }

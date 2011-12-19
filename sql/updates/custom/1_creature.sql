@@ -12,7 +12,7 @@ How about placing a bowel of brain to attract them which explodes? (Bowels and B
 UPDATE `creature_template` SET `ScriptName`='npc_proximity_mine' WHERE `entry`=34362; -- Proximity Mine
 DELETE FROM `creature_template` WHERE `entry` IN (792130,792131,792132,792133,792134,792135,792136,792137,792138,792139);
 INSERT INTO `creature_template` (`entry`,`difficulty_entry_1`,`difficulty_entry_2`,`difficulty_entry_3`,`KillCredit1`,`KillCredit2`,`modelid1`,`modelid2`,`modelid3`,`modelid4`,`name`,`subname`,`IconName`,`gossip_menu_id`,`minlevel`,`maxlevel`,`exp`,`faction_A`,`faction_H`,`npcflag`,`speed_walk`,`speed_run`,`scale`,`rank`,`mindmg`,`maxdmg`,`dmgschool`,`attackpower`,`dmg_multiplier`,`baseattacktime`,`rangeattacktime`,`unit_class`,`unit_flags`,`dynamicflags`,`family`,`trainer_type`,`trainer_spell`,`trainer_class`,`trainer_race`,`minrangedmg`,`maxrangedmg`,`rangedattackpower`,`type`,`type_flags`,`lootid`,`pickpocketloot`,`skinloot`,`resistance1`,`resistance2`,`resistance3`,`resistance4`,`resistance5`,`resistance6`,`spell1`,`spell2`,`spell3`,`spell4`,`spell5`,`spell6`,`spell7`,`spell8`,`PetSpellDataId`,`VehicleId`,`mingold`,`maxgold`,`AIName`,`MovementType`,`InhabitType`,`Health_mod`,`Mana_mod`,`Armor_mod`,`RacialLeader`,`questItem1`,`questItem2`,`questItem3`,`questItem4`,`questItem5`,`questItem6`,`movementId`,`RegenHealth`,`equipment_id`,`mechanic_immune_mask`,`flags_extra`,`ScriptName`,`WDBVerified`) VALUES
-(792130,0,0,0,0,0,26942,0,0,0,'Zombie','','',0,80,80,2,233,233,0,1,1.14286,1,0,252,357,0,304,1,2000,0,1,0,8,0,0,0,0,0,215,320,44,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'',0,3,2,1,1,0,0,0,0,0,0,0,88,1,0,0,0,'npc_zombie',1),
+(792130,0,0,0,0,0,26942,0,0,0,'Zombie','','',0,80,80,2,233,233,0,1,1.14286,1,0,252,357,0,304,1,2000,0,1,0,8,0,0,0,0,0,215,320,44,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'',0,3,2,1,1,0,0,0,0,0,0,0,88,0,0,0,0,'npc_zombie',1),
 (792131,0,0,0,0,0,17200,0,0,0,'Zombie Kill Counter','Invisible for players','',0,80,80,1,35,35,0,1,1.14286,1,0,200,281,0,278,1,2000,0,1,33554432,8,0,0,0,0,0,166,246,35,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'',0,3,1,1,1,0,0,0,0,0,0,0,0,1,0,0,130,'npc_zombie_kill_counter',1),
 (792132,0,0,0,0,0,17200,0,0,0,'Zombie Spawner','Invisible for players','',0,80,80,1,35,35,0,1,1.14286,1,0,200,281,0,278,1,2000,0,1,33554432,8,0,0,0,0,0,166,246,35,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'',0,3,1,1,1,0,0,0,0,0,0,0,0,1,0,0,130,'npc_zombie_spawner',1),
 (792133,0,0,0,0,0,17200,0,0,0,'Zombie Spawnpoint','Invisible for players','',0,80,80,1,35,35,0,1,1.14286,1,0,200,281,0,278,1,2000,0,1,33554432,8,0,0,0,0,0,166,246,35,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'',0,3,1,1,1,0,0,0,0,0,0,0,0,1,0,0,130,'npc_zombie_spawnpoint',1),
@@ -35,11 +35,17 @@ INSERT INTO `creature` (`id`,`map`,`spawnMask`,`phaseMask`,`equipment_id`,`posit
 (792133,289,1,1,0,138.114655,132.511612,97.275185,1.542667,600,0,0,300,0,0,0,0,0),
 (792133,289,1,1,0,158.301880,134.723984,99.867416,1.750798,600,0,0,300,0,0,0,0,0);
 
+-- Spawn the gameobjects
+DELETE FROM `gameobject` WHERE `id` IN (293612);
+INSERT INTO `gameobject` (`id`,`map`,`spawnMask`,`phaseMask`,`position_x`,`position_y`,`position_z`,`orientation`,`rotation0`,`rotation1`,`rotation2`,`rotation3`,`spawntimesecs`,`animprogress`,`state`) VALUES
+(293612,289,1,1,97.0955,167.837,93.0852,6.27202,0,0,0.00558055,-0.999984,300,0,1);
+
 -- Gameobjects
-DELETE FROM `gameobject_template` WHERE `entry` IN (293610,293611);
+DELETE FROM `gameobject_template` WHERE `entry` IN (293610,293611,293612);
 INSERT INTO `gameobject_template` (`entry`,`type`,`displayId`,`name`,`IconName`,`castBarCaption`,`unk1`,`faction`,`flags`,`size`,`questItem1`,`questItem2`,`questItem3`,`questItem4`,`questItem5`,`questItem6`,`data0`,`data1`,`data2`,`data3`,`data4`,`data5`,`data6`,`data7`,`data8`,`data9`,`data10`,`data11`,`data12`,`data13`,`data14`,`data15`,`data16`,`data17`,`data18`,`data19`,`data20`,`data21`,`data22`,`data23`,`AIName`,`ScriptName`,`WDBVerified`) VALUES
 (293610,5,8477,'Zombie Barricade','','','',0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'','',1),
-(293611,22,166,'Repair Barricade','','','',0,0,1,0,0,0,0,0,0,68077,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'','',1);
+(293611,22,166,'Repair Barricade','','','',0,0,1,0,0,0,0,0,0,68077,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'','',1),
+(293612,2,7146,'Teleport Away','','','',35,0,1,0,0,0,0,0,0,0,0,0,56003,0,0,100003,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'','go_zombie_teleport_away',1);
 
 -- Conditions for spells to hit Barricades
 /*DELETE FROM `conditions` WHERE `SourceTypeOrReferenceId`=13 AND `SourceEntry` IN (7670,42880,42904);
@@ -63,14 +69,15 @@ INSERT INTO `spell_linked_spell` (`spell_trigger`,`spell_effect`,`type`,`comment
 INSERT INTO `creature_template_addon` (`entry`,`mount`,`bytes1`,`bytes2`,`emote`,`auras`) VALUES
 (792133,0,0,0,0,'20374'),(792138,0,0,0,0,'49702');*/
 
-DELETE FROM `npc_text` WHERE `ID` IN (100000,100001,100002);
+-- Static texts
+DELETE FROM `npc_text` WHERE `ID` IN (100000,100001,100002,100003);
 INSERT INTO `npc_text` (`ID`,`text0_0`) VALUES
-(100000, 'Greetings $N. Scholomance is being attacked by zombies, I need you and your companions to help us drive them out.$B<insert more blabla text here>$B$BPlease help us!'),
-(100001, 'You need to be in a group to start the Zombie Event'),
-(100002, 'You need to be the group leader to start the Zombie Event');
+(100000,'Greetings $N. Scholomance is being attacked by zombies, I need you and your companions to help us drive them out.$B<insert more blabla text here>$B$BPlease help us!'),
+(100001,'You need to be in a group to start the Zombie Event'),
+(100002,'You need to be the group leader to start the Zombie Event'),
+(100003,'Would you like to teleport away, $N?');
 
-DELETE FROM `gossip_menu` WHERE `entry` IN (56000,56001,56002);
+-- Link them
+DELETE FROM `gossip_menu` WHERE `entry` IN (56000,56001,56002,56003);
 INSERT INTO `gossip_menu` (`entry`,`text_id`) VALUES
-(56000,100000),
-(56001,100001),
-(56002,100002);
+(56000,100000),(56001,100001),(56002,100002),(56003,100003);
