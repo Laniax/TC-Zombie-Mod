@@ -23,6 +23,18 @@ INSERT INTO `creature_template` (`entry`,`difficulty_entry_1`,`difficulty_entry_
 
 (792138,0,0,0,0,0,3233,0,0,0,'Cockroach','','',0,1,1,0,2049,2049,0,1,1.14286,1,0,2,2,0,24,1,2000,0,1,0,8,0,0,0,0,0,1,1,0,8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'',0,3,0.1,1,1,0,0,0,0,0,0,0,100,1,0,0,0,'',1);
 
+-- Spawn the creatures
+DELETE FROM `creature` WHERE `id` IN (792133);
+INSERT INTO `creature` (`id`,`map`,`spawnMask`,`phaseMask`,`equipment_id`,`position_x`,`position_y`,`position_z`,`orientation`,`spawntimesecs`,`spawndist`,`currentwaypoint`,`curhealth`,`curmana`,`MovementType`,`npcflag`,`unit_flags`,`dynamicflags`) VALUES
+(792133,289,1,1,0,136.054184,201.700638,95.039246,4.680336,600,0,0,300,0,0,0,0,0),
+(792133,289,1,1,0,156.154419,201.463287,98.452942,4.246449,600,0,0,300,0,0,0,0,0),
+(792133,289,1,1,0,121.992653,200.666763,98.161942,4.664613,600,0,0,300,0,0,0,0,0),
+(792133,289,1,1,0,107.410492,199.340973,96.184494,4.821693,600,0,0,300,0,0,0,0,0),
+(792133,289,1,1,0,107.863098,133.579697,97.949394,1.482956,600,0,0,300,0,0,0,0,0),
+(792133,289,1,1,0,123.680313,132.347824,97.240753,1.570144,600,0,0,300,0,0,0,0,0),
+(792133,289,1,1,0,138.114655,132.511612,97.275185,1.542667,600,0,0,300,0,0,0,0,0),
+(792133,289,1,1,0,158.301880,134.723984,99.867416,1.750798,600,0,0,300,0,0,0,0,0);
+
 -- Gameobjects
 DELETE FROM `gameobject_template` WHERE `entry` IN (293610,293611);
 INSERT INTO `gameobject_template` (`entry`,`type`,`displayId`,`name`,`IconName`,`castBarCaption`,`unk1`,`faction`,`flags`,`size`,`questItem1`,`questItem2`,`questItem3`,`questItem4`,`questItem5`,`questItem6`,`data0`,`data1`,`data2`,`data3`,`data4`,`data5`,`data6`,`data7`,`data8`,`data9`,`data10`,`data11`,`data12`,`data13`,`data14`,`data15`,`data16`,`data17`,`data18`,`data19`,`data20`,`data21`,`data22`,`data23`,`AIName`,`ScriptName`,`WDBVerified`) VALUES
@@ -30,16 +42,16 @@ INSERT INTO `gameobject_template` (`entry`,`type`,`displayId`,`name`,`IconName`,
 (293611,22,166,'Repair Barricade','','','',0,0,1,0,0,0,0,0,0,68077,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'','',1);
 
 -- Conditions for spells to hit Barricades
-DELETE FROM `conditions` WHERE `SourceTypeOrReferenceId`=13 AND `SourceEntry` IN (7670,42880,42904);
+/*DELETE FROM `conditions` WHERE `SourceTypeOrReferenceId`=13 AND `SourceEntry` IN (7670,42880,42904);
 INSERT INTO `conditions` (`SourceTypeOrReferenceId`,`SourceGroup`,`SourceEntry`,`ElseGroup`,`ConditionTypeOrReference`,`ConditionValue1`,`ConditionValue2`,`ConditionValue3`,`ErrorTextId`,`ScriptName`,`Comment`) VALUES
 (13,0,7670,0,29,792130,3,0,0,'',"Explode targets all Zombies within 3 yards");
--- (13,0,42880,0,18,1,792130,0,0,'',NULL),
--- (13,0,42904,0,18,1,792130,0,0,'',NULL);
+(13,0,42880,0,18,1,792130,0,0,'',NULL),
+(13,0,42904,0,18,1,792130,0,0,'',NULL);*/
 
 -- Scriptname for repairing broken barricade spell
-DELETE FROM `spell_script_names` WHERE `ScriptName`='spell_repair_channel';
+DELETE FROM `spell_script_names` WHERE `ScriptName` IN ('spell_repair_channel','spell_zombie_rapid_fire');
 INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
-(68077,'spell_repair_channel');
+(68077,'spell_repair_channel'),(71250,'spell_zombie_rapid_fire');
 
 -- Explosion Visual triggers Knockback
 DELETE FROM `spell_linked_spell` WHERE `spell_trigger`=71495;
@@ -47,31 +59,6 @@ INSERT INTO `spell_linked_spell` (`spell_trigger`,`spell_effect`,`type`,`comment
 (71495,40191,0,"Explosion Visual - Legion Ring Knockback");
 
 -- Add arrow tag to the Triggers - Infected visual to Cockroaches
-DELETE FROM `creature_template_addon` WHERE `entry` IN (792133,792138);
+/*DELETE FROM `creature_template_addon` WHERE `entry` IN (792133,792138);
 INSERT INTO `creature_template_addon` (`entry`,`mount`,`bytes1`,`bytes2`,`emote`,`auras`) VALUES
-(792133,0,0,0,0,'20374'),(792138,0,0,0,0,'49702');
-
--- Zombie Spawner SAI
--- Might need to be done on GUID, or just cpp
-/*SET @ENTRY := 792132;
-SET @SPELL_BLOW_UP := 0;
-DELETE FROM `smart_scripts` WHERE `entryorguid` IN (@ENTRY,@ENTRY*100);
-INSERT INTO `smart_scripts` (`entryorguid`,`source_type`,`id`,`link`,`event_type`,`event_phase_mask`,`event_chance`,`event_flags`,`event_param1`,`event_param2`,`event_param3`,`event_param4`,`action_type`,`action_param1`,`action_param2`,`action_param3`,`action_param4`,`action_param5`,`action_param6`,`target_type`,`target_param1`,`target_param2`,`target_param3`,`target_x`,`target_y`,`target_z`,`target_o`,`comment`) VALUES
-(@ENTRY,0,0,0,60,0,100,0,1000,6000,15000,15000,12,x,1,8,0,0,0,1,0,0,0,0,0,0,0,"Zombie Spawner - Update - Summon Zombie"),-- Summon a zombie every 15 seconds
-(@ENTRY,0,0,0,8,0,100,0,@SPELL_BLOW_UP,0,0,0,80,@ENTRY*100,0,2,0,0,0,1,0,0,0,0,0,0,0,"Zombie Spawner - On Spellhit - Run Script"),
-(@ENTRY*100,9,0,0,0,0,100,0,0,0,0,0,50,x,100000000,0,0,0,0,8,0,0,0,x,y,z,o,"Zombie Turret - On Script - Summon Hellfire Fire"),
-(@ENTRY*100,9,0,0,0,0,100,0,0,0,0,0,50,x,100000000,0,0,0,0,8,0,0,0,x,y,z,o,"Zombie Turret - On Script - Summon Hellfire Fire"),
-(@ENTRY*100,9,0,0,0,0,100,0,0,0,0,0,50,x,100000000,0,0,0,0,8,0,0,0,x,y,z,o,"Zombie Turret - On Script - Summon Hellfire Fire"),
-(@ENTRY*100,9,0,0,0,0,100,0,0,0,0,0,50,x,100000000,0,0,0,0,8,0,0,0,x,y,z,o,"Zombie Turret - On Script - Summon Hellfire Fire"),
-(@ENTRY*100,9,0,0,0,0,100,0,0,0,0,0,50,x,100000000,0,0,0,0,8,0,0,0,x,y,z,o,"Zombie Turret - On Script - Summon Hellfire Fire"),
-(@ENTRY*100,9,0,0,0,0,100,0,100,100,0,0,41,0,0,0,0,0,0,1,0,0,0,0,0,0,0,"Zombie Turret - On Script - Forced Despawn"),*/
-
-
--- Zombie Turret SAI
--- Needs work
-SET @ENTRY := 792134;
-SET @SPELL_RAPID_SHOT := 12549;
-DELETE FROM `smart_scripts` WHERE `entryorguid`=@ENTRY;
-INSERT INTO `smart_scripts` (`entryorguid`,`source_type`,`id`,`link`,`event_type`,`event_phase_mask`,`event_chance`,`event_flags`,`event_param1`,`event_param2`,`event_param3`,`event_param4`,`action_type`,`action_param1`,`action_param2`,`action_param3`,`action_param4`,`action_param5`,`action_param6`,`target_type`,`target_param1`,`target_param2`,`target_param3`,`target_x`,`target_y`,`target_z`,`target_o`,`comment`) VALUES
-(@ENTRY,0,0,0,1,0,100,1,0,0,0,0,8,0,0,0,0,0,0,1,0,0,0,0,0,0,0,"Zombie Turret - Out of Combat - Set React Passive"),
-(@ENTRY,0,1,0,60,0,100,0,1000,1000,6000,7000,11,@SPELL_RAPID_SHOT,1,0,0,0,0,9,792130,0,80,0,0,0,0,"Zombie Turret - On Update - Cast Rapid Shot");
+(792133,0,0,0,0,'20374'),(792138,0,0,0,0,'49702');*/
