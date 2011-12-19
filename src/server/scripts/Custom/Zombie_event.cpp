@@ -17,7 +17,7 @@
  */
 
 /* Explanation
-<TODO>
+** WARNING: THIS EVENT CAN CAUSE MAJOR LAG DUE TO HAVING COUPLE OF HUNDRED NPCS FIGHTING AT THE SAME TIME, USE AT OWN RISK **
 */
 
 #include "WorldSocket.h"
@@ -91,6 +91,14 @@ Position const ZombieSpawnPoints[MAX_SPAWNPOINTS] =
     {158.301880f, 134.723984f, 99.867416f, 1.750798f},
 };
 
+uint32 const MAX_TURRETPOINTS = 3;
+Position const TurretPlacePoints[MAX_TURRETPOINTS] = 
+{
+//	  {,,,},
+//	  {,,,},
+//	  {,,,},
+};
+
 class npc_zombie_barricade_trigger : public CreatureScript
 {
     public:
@@ -146,12 +154,56 @@ class npc_zombie_kill_counter : public CreatureScript
                 me->SetReactState(REACT_PASSIVE);
             }
 
-            uint8 killCounter;
+			uint32 killsForWaveEnding;
+			uint32 waveCounter;
+            uint32 killCounter;
 
             void Reset()
             {
                 killCounter = 0;
+				waveCounter = 0;
+				killsForWaveEnding = 20; // first wave will always start with 20 zombies
             }
+
+			void DespawnTurrets(bool all);
+			void DespawnTurrets(bool all, enum ZombieCreatures Turret)
+			{
+				if (all)
+				{
+					// NPC_TURRET_P1
+					std::list<Creature*> TurretList1; 
+							GetCreatureListWithEntryInGrid(TurretList1, me, NPC_TURRET_P1, 100.0f);
+							for (std::list<Creature*>::iterator itr = TurretList1.begin(); itr != TurretList1.end(); ++itr)
+								(*itr)->ForcedDespawn();
+
+					// NPC_TURRET_P2
+					std::list<Creature*> TurretList2;
+							GetCreatureListWithEntryInGrid(TurretList2, me, NPC_TURRET_P2, 100.0f);
+							for (std::list<Creature*>::iterator itr = TurretList2.begin(); itr != TurretList2.end(); ++itr)
+								(*itr)->ForcedDespawn();
+				}
+				if (Turret)
+				{
+					std::list<Creature*> TurretList;
+							GetCreatureListWithEntryInGrid(TurretList, me, Turret, 100.0f);
+							for (std::list<Creature*>::iterator itr = TurretList.begin(); itr != TurretList.end(); ++itr)
+								(*itr)->ForcedDespawn();
+				}
+			}
+
+			void StopSpawningZombies()
+			{
+				for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
+                    {
+                        if (floor(ZombieSpawnPoints[i].GetPositionX()) == floor(me->GetPositionX())
+                            && floor(ZombieSpawnPoints[i].GetPositionY()) == floor(me->GetPositionY()))
+                        {
+                            if (Creature* spawner = me->FindNearestCreature(NPC_SPAWNER, 200.0f, true))
+                                if (SpawnerAI* spawnerAI = CAST_AI(SpawnerAI, spawner->AI()))
+                                    spawnerAI->StopSpawningZombies(i);
+                        }
+                    }
+			}
 
             void SpellHit(Unit* caster, SpellInfo const* spell)
             {
@@ -159,40 +211,42 @@ class npc_zombie_kill_counter : public CreatureScript
                 {
                     ++killCounter;
 
-                    // Phase 1 - We summon a few turrets which shoot on randomly picked out zombies
-                    // These turrets are not eligible for blowing up spawnpoints, those will be spawned in P2
-                    if (killCounter == 50)
-                    {
-                        //me->SummonCreature(NPC_TURRET_P1, x, y, z, o, TEMPSUMMON_MANUAL_DESPAWN, 0);
-                        //me->SummonCreature(NPC_TURRET_P1, x, y, z, o, TEMPSUMMON_MANUAL_DESPAWN, 0);
-                        //me->SummonCreature(NPC_TURRET_P1, x, y, z, o, TEMPSUMMON_MANUAL_DESPAWN, 0);
-                    }
+					ZombieAI* zombieAI;
+					Creature* zombie = me->FindNearestCreature(NPC_ZOMBIE, 200.0f, true);
 
-                    // Phase 2
-                    if (killCounter == 100)
-                    {
-                        // Despawn the turrets from P1
-                        std::list<Creature*> TurretList1;
-                        GetCreatureListWithEntryInGrid(TurretList1, me, NPC_TURRET_P1, 100.0f);
-                        for (std::list<Creature*>::iterator itr = TurretList1.begin(); itr != TurretList1.end(); ++itr)
-                            (*itr)->ForcedDespawn();
+					if (zombie)
+						zombieAI = CAST_AI(ZombieAI, zombie->AI());
 
-                        //me->SummonCreature(NPC_TURRET_P2, x, y, z, o, TEMPSUMMON_MANUAL_DESPAWN, 0);
-                    }
-                    
-                    // Phase 3
-                    if (killCounter == 150)
+                    if (killCounter%killsForWaveEnding == 0) // Wave End
                     {
-                        // Despawn the turret from P2
-                        if (Creature* turretP2 = me->FindNearestCreature(NPC_TURRET_P2, 50.0f, true))
-                            turretP2->ForcedDespawn();
-                    }
+						++waveCounter;
+						StopSpawningZombies();
+						DespawnTurrets(true); // there shouldn't be any turrets but clear them anyway.
 
-                    // Phase 4
-                    if (killCounter == 200)
-                    {
+						// Prepare next wave
+						if (waveCounter <= 5) // zombie amount to spawn
+							killsForWaveEnding += ((waveCounter * urand(7,10)) * 2);
+						else
+							killsForWaveEnding += ((waveCounter * urand(9,12)) * 2);
 
+						if (zombieAI)
+							zombieAI->zombieMovementSpeed += 0.05f; // slightly increase movement speed of zombies in next wave
+
+						if (urand(0,1) == 0) // 50% chance to spawn a turret on new wave
+						{
+							int8 t = urand(0,2);
+							if (urand(0,1) == 0) // turret 1
+								me->SummonCreature(NPC_TURRET_P1, TurretPlacePoints[t].GetPositionX(), TurretPlacePoints[t].GetPositionY(), TurretPlacePoints[t].GetPositionZ(), TurretPlacePoints[t].GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 30000);
+							else // turret 2
+								me->SummonCreature(NPC_TURRET_P2, TurretPlacePoints[t].GetPositionX(), TurretPlacePoints[t].GetPositionY(), TurretPlacePoints[t].GetPositionZ(), TurretPlacePoints[t].GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 30000);
+						}
                     }
+					else
+					{
+						// dont spawn powerups when in waveswitch
+						if (zombieAI)
+							zombieAI->attemptSpawnPowerUp = true; 
+					}
                 }
             }
         };
@@ -216,14 +270,17 @@ class npc_zombie : public CreatureScript
             }
 
             uint32 attackBarricadeTimer;
+			uint16 zombieMovementSpeed;
 
             bool atBarricade;
+			bool attemptSpawnPowerUp;
 
             void Reset()
             {
                 attackBarricadeTimer = 3500;
-
-                me->SetReactState(REACT_PASSIVE); // Not putting this up there so we can cancel it when a bracket is down
+				attemptSpawnPowerUp = false;
+                me->SetReactState(REACT_PASSIVE); // Not putting this up there so we can cancel it when a barricade is down
+				zombieMovementSpeed = 1.0f;
             }
 
             void JustDied(Unit* /*killer*/)
@@ -234,8 +291,9 @@ class npc_zombie : public CreatureScript
                 DoCast(me, SPELL_ZOMBIE_DIES, true);
                 me->SummonGameObject(GAMEOBJECT_SKELETON, me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation(), 0, 0, 0, 0, 60000); // One minute
 
-                if (urand(0, 9) == 0) // 10% chance
-                    DoSpawnPowerUp();
+				if (attemptSpawnPowerUp)
+					if (urand(0, 9) == 0) // 10% chance
+						DoSpawnPowerUp();
 
                 me->ForcedDespawn(2000); // We want all bodies to be removed when we die, but we also want the visual to be there
             }
@@ -257,6 +315,9 @@ class npc_zombie : public CreatureScript
 
             void IsSummonedBy(Unit* /*summoner*/)
             {
+				me->SetSpeed(MOVE_RUN, zombieMovementSpeed, true);  // zombie speed is slightly increased each wave
+				me->SetSpeed(MOVE_WALK, zombieMovementSpeed, true);
+
                 if (me->FindNearestGameObject(GAMEOBJECT_BARRICADE, 50.0f))
                     if (Creature* barricadeTrigger = me->FindNearestCreature(NPC_BARRICADE_TRIGGER, 100.0f, true))
                         me->GetMotionMaster()->MovePoint(1, barricadeTrigger->GetPositionX()+3, barricadeTrigger->GetPositionY(), barricadeTrigger->GetPositionZ());
@@ -296,6 +357,8 @@ class npc_zombie : public CreatureScript
         }
 };
 
+typedef npc_zombie::npc_zombieAI ZombieAI;
+
 class npc_zombie_spawner : public CreatureScript
 {
     public:
@@ -317,12 +380,12 @@ class npc_zombie_spawner : public CreatureScript
                 summonTimer = 15000;
             }
  
-            void StopSpawning(uint8 spawnPoint)
+            void StopSpawningZombies(uint8 spawnPoint)
             {
                 canSpawn[spawnPoint] = false;
             }
  
-            void DoSpawnZombies()
+            void StartSpawningZombies()
             {
                 for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
                 {
@@ -345,7 +408,7 @@ class npc_zombie_spawner : public CreatureScript
             {
                 if (summonTimer <= diff)
                 {
-                    DoSpawnZombies();
+                    StartSpawningZombies();
                     summonTimer = 15000;
                 }
                 else
@@ -384,7 +447,7 @@ class npc_zombie_spawnpoint : public CreatureScript
                         {
                             if (Creature* spawner = me->FindNearestCreature(NPC_SPAWNER, 200.0f, true))
                                 if (SpawnerAI* spawnerAI = CAST_AI(SpawnerAI, spawner->AI()))
-                                    spawnerAI->StopSpawning(i);
+                                    spawnerAI->StopSpawningZombies(i);
                         }
                     }
                 }
@@ -642,7 +705,6 @@ class custom_mr_asshat : public CreatureScript
                 }
                 group->SetReadyCheckFromNPC(true);
             }
-
             return true;
         }
 };
@@ -672,7 +734,6 @@ class custom_serverscript : public ServerScript
                             member->TeleportTo(289, 136.054184f, 201.700638f, 95.039246f, 4.680336f, TELE_TO_NOT_UNSUMMON_PET);
                     }
                 }
-
                 group->ResetReadyCheckState();
                 group->SetReadyCheckFromNPC(false);
             }
