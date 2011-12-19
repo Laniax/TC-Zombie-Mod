@@ -2082,16 +2082,15 @@ bool Group::GetReadyCheckState()
 {
     bool result = true;
 
-    for (GroupReference* itr = GetFirstMember(); itr != NULL; itr = itr->next())
+    for (GroupReference* ref = GetFirstMember(); ref != NULL; ref = ref->next())
     {
-        Player* member = itr->getSource();
-        if (!member)
-            continue;
-
-        PlayerReadyCheck::iterator itrlol = playerReadyCheck.find(member->GetGUID());
-        if (itrlol != playerReadyCheck.end())
-            if (!itrlol->second)
-                result = false;
+        if (Player* member = ref->getSource())
+        {
+            PlayerReadyCheck::iterator itr = playerReadyCheck.find(member->GetGUID());
+            if (itr != playerReadyCheck.end())
+                if (!itr->second)
+                    result = false;
+        }
     }
 
     return result;
