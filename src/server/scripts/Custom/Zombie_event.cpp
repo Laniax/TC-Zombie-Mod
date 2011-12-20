@@ -35,9 +35,8 @@ enum ZombieSpells
     // Kill counter
     SPELL_COUNTER           = 18282,
 
-    // Boom bot, Mine
-    SPELL_EXPLODE           =  7670, // Used by Bomb Bot
-    SPELL_EXPLODE_2         = 71495, // Used by Proximity Mine - triggers knockback (40191)
+    // Bomb Bot and Proximity Mine
+    SPELL_EXPLODE           = 69689,
 
     // Spawnpoint
     SPELL_KILL_SPAWNPOINT   = 60861,
@@ -68,7 +67,7 @@ enum ZombieCreatures
     NPC_TURRET_P2           = 792136,
     NPC_BOMB_BOT            = 792137,
     NPC_COCKROACH           = 792138,
-    NPC_ASSHAT              = 792139,
+    NPC_TARUK               = 792139,
 };
 
 enum ZombieEvents
@@ -184,14 +183,18 @@ class npc_zombie : public CreatureScript
                 if (caster->GetTypeId() != TYPEID_UNIT)
                     return;
 
-                // Die when a Bomb Bot or Proximity Mine explodes near us
-                if (spell->Id == SPELL_EXPLODE || spell->Id == SPELL_EXPLODE_2)
+                // Only die if the caster is a bomb bot, the mine should explode and afterwards we should continue walking
+                if (spell->Id == SPELL_EXPLODE && caster->GetEntry() == NPC_BOMB_BOT)
                     me->Kill(me);
+
+                // Since we shouldn't regenerate health when a turret attacks us, we'll set ourselves in combat with them
+                if (spell->Id == SPELL_RAPID_FIRE)
+                    me->SetInCombatWith(caster);
             }
 
             void UpdateAI(uint32 const diff)
             {
-                if (atBarricade)
+                /*if (atBarricade)
                 {
                     if (attackBarricadeTimer <= diff)
                     {
@@ -200,7 +203,7 @@ class npc_zombie : public CreatureScript
                     }
                     else
                         attackBarricadeTimer -= diff;
-                }
+                }*/
             }
         };
 
@@ -482,19 +485,18 @@ class npc_proximity_mine : public CreatureScript
 
         struct npc_proximity_mineAI : public Scripted_NoMovementAI
         {
-            npc_proximity_mineAI(Creature* creature) : Scripted_NoMovementAI(creature)
-            {
-                me->SetReactState(REACT_PASSIVE); // We shouldn't attack targets ANYTIME
-            }
+            npc_proximity_mineAI(Creature* creature) : Scripted_NoMovementAI(creature) { }
 
             void MoveInLineOfSight(Unit* who)
             {
-                if (!who || who->GetEntry() != NPC_ZOMBIE || !me->IsWithinDist(who, 1.5f))
+                if (!who || who->GetEntry() != NPC_ZOMBIE)
                     return;
 
-                DoCast(who, SPELL_EXPLODE_2, true);
-                //who->Kill(who);
-                me->ForcedDespawn();
+                if (me->IsWithinDist(who, 1.0f))
+                {
+                    DoCast(me, SPELL_EXPLODE, true);
+                    me->ForcedDespawn(1000);
+                }
             }
         };
 
@@ -519,11 +521,10 @@ class npc_bomb_bot : public CreatureScript
             {
                 explodeTimer = 10000;
 
-                // Or do we want to make it move random and then explode?
                 if (Creature* zombie = me->FindNearestCreature(NPC_ZOMBIE, 30.0f, true))
                     me->GetMotionMaster()->MoveFollow(zombie, 2.0f, (M_PI / 2));
                 else
-                    me->ForcedDespawn(); // Our purpose is useless
+                    me->ForcedDespawn(1500); // Our purpose is useless
             }
 
             void UpdateAI(uint32 const diff)
@@ -531,7 +532,7 @@ class npc_bomb_bot : public CreatureScript
                 if (explodeTimer <= diff)
                 {
                     DoCast(SPELL_EXPLODE);
-                    me->ForcedDespawn();
+                    me->ForcedDespawn(500);
                 }
                 else
                     explodeTimer -= diff;
@@ -588,6 +589,7 @@ class go_zombie_teleport_away : public GameObjectScript
         {
             player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT,"I want to teleport away from here", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
             player->SEND_GOSSIP_MENU(56003, go->GetGUID());
+
             return true;
         }
 
@@ -596,9 +598,8 @@ class go_zombie_teleport_away : public GameObjectScript
             player->PlayerTalkClass->ClearMenus();
 
             if (action == GOSSIP_ACTION_INFO_DEF + 1)
-            {
                 player->TeleportTo(player->m_homebindMapId, player->m_homebindX, player->m_homebindY, player->m_homebindZ, player->GetOrientation());
-            }
+
             return true;
         }
 };
@@ -644,7 +645,7 @@ class spell_repair_channel : public SpellScriptLoader
 class ZombieEntryCheck
 {
     public:
-        ZombieEntryCheck() {}
+        ZombieEntryCheck() { }
 
         bool operator()(Unit* unit) const
         {
@@ -777,17 +778,17 @@ class zombie_mod_serverscript : public ServerScript
 
 void AddSC_Zombie_event()
 {
-    new npc_zombie_barricade_trigger();
     new npc_zombie();
-    new npc_bomb_bot();
-    new npc_zombie_kill_counter();
     new npc_zombie_spawner();
     new npc_zombie_spawnpoint();
+    new npc_zombie_kill_counter();
+    new npc_zombie_barricade_trigger();
     new npc_proximity_mine();
+    new npc_bomb_bot();
     new npc_zombie_turret();
+    new go_zombie_teleport_away();
     new spell_repair_channel();
     new spell_zombie_rapid_fire();
-    new zombie_mod_serverscript();
     new npc_zombie_teleporter();
-    new go_zombie_teleport_away();
+    new zombie_mod_serverscript();
 }
