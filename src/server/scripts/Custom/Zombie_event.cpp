@@ -248,9 +248,13 @@ class npc_zombie_spawner : public CreatureScript
  
             void StartSpawningZombies()
             {
+                Counters * counter;
                 for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
                 {
                     if (!canSpawn[i])
+                        continue;
+                    
+                    if (counter->GetAmountToSpawn() <= 0)
                         continue;
  
                     float x = ZombieSpawnPoints[i].GetPositionX() + irand(-4, 4);
@@ -259,9 +263,12 @@ class npc_zombie_spawner : public CreatureScript
                     float ground_Z = me->GetMap()->GetHeight(x, y, z, true, MAX_FALL_DISTANCE);
                     if (fabs(ground_Z - z) < 0.1f)
                         z = ground_Z;
- 
+
                     if (Creature* zombie = me->SummonCreature(NPC_ZOMBIE, x, y, z, ZombieSpawnPoints[i].GetOrientation(), TEMPSUMMON_MANUAL_DESPAWN))
+                    {
                         zombie->CastSpell(zombie, SPELL_EMERGE_VISUAL, false);
+                        counter->SetAmountToSpawn(-1);
+                    }
                 }
             }
  
@@ -337,15 +344,15 @@ class npc_zombie_kill_counter : public CreatureScript
                 me->SetReactState(REACT_PASSIVE);
             }
 
-            uint32 killsForWaveEnding;
             uint32 waveCounter;
             uint32 killCounter;
 
             void Reset()
             {
+                Counters * counter;
                 killCounter = 0;
                 waveCounter = 0;
-                killsForWaveEnding = 20; // first wave will always start with 20 zombies
+                counter->SetWaveTotalAmount(20); // first wave should always start off with 20 zombies.
             }
 
             void DespawnTurrets(bool all)
@@ -375,42 +382,36 @@ class npc_zombie_kill_counter : public CreatureScript
                 }*/
             }
 
-            void StopSpawningZombies()
-            {
-                for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
-                {
-                    if (floor(ZombieSpawnPoints[i].GetPositionX()) == floor(me->GetPositionX()) && floor(ZombieSpawnPoints[i].GetPositionY()) == floor(me->GetPositionY()))
-                    {
-                        if (Creature* spawner = me->FindNearestCreature(NPC_SPAWNER, 200.0f, true))
-                            if (SpawnerAI* spawnerAI = CAST_AI(SpawnerAI, spawner->AI()))
-                                spawnerAI->StopSpawningZombies(i);
-                    }
-                }
-            }
-
             void SpellHit(Unit* caster, SpellInfo const* spell)
             {
                 if (caster->GetTypeId() == TYPEID_UNIT && spell->Id == SPELL_COUNTER)
                 {
                     ++killCounter;
-
+                    Counters * counter;
                     ZombieAI* zombieAI;
                     Creature* zombie = me->FindNearestCreature(NPC_ZOMBIE, 200.0f, true);
 
                     if (zombie)
                         zombieAI = CAST_AI(ZombieAI, zombie->AI());
 
-                    if (killCounter % killsForWaveEnding == 0) // Wave End
+                    if (killCounter >= counter->GetAmountToSpawn()) // Wave End
                     {
                         ++waveCounter;
-                        StopSpawningZombies();
+                        killCounter = 0; //Reset amount of zombies killed this wave
                         DespawnTurrets(true); // There shouldn't be any turrets but clear them anyway.
 
                         // Prepare next wave
-                        if (waveCounter <= 5) // Amount of zombies we should spawn
-                            killsForWaveEnding += ((waveCounter * urand(7,10)) * 2);
+                        // Amount of zombies we should spawn
+                        if (waveCounter <= 5) // we should go easy on the players on wave 5 and under ;)
+                        {
+                            counter->SetAmountToSpawn(counter->GetWaveTotalAmount() + ((waveCounter * urand(7,10)) * 2));
+                            counter->SetWaveTotalAmount(counter->GetAmountToSpawn());
+                        }
                         else
-                            killsForWaveEnding += ((waveCounter * urand(9,12)) * 2);
+                        {
+                            counter->SetAmountToSpawn(counter->GetWaveTotalAmount() + ((waveCounter * urand(9,12)) * 2));
+                            counter->SetWaveTotalAmount(counter->GetAmountToSpawn());
+                        }
 
                         if (zombieAI)
                             zombieAI->zombieMovementSpeed += 0.05f; // Slightly increase the movement speed of zombies in next wave
@@ -662,6 +663,22 @@ class ZombieEntryCheck
 
             return unit->GetEntry() != NPC_ZOMBIE;
         }
+};
+
+class Counters
+{
+    public:
+        // Spawn amounts
+        const uint32 GetAmountToSpawn() const { return _AmountToSpawn; }
+        void SetAmountToSpawn(uint32 value) { _AmountToSpawn = value; }
+
+        // Wave total
+        const uint32 GetWaveTotalAmount() const { return _WaveTotal; }
+        void SetWaveTotalAmount(uint32 value) { _WaveTotal = value; }
+
+    private:
+        uint32 _AmountToSpawn;
+        uint32 _WaveTotal;
 };
 
 class spell_zombie_rapid_fire : public SpellScriptLoader
