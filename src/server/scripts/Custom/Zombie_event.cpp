@@ -394,7 +394,7 @@ class npc_zombie_kill_counter : public CreatureScript
                     if (zombie)
                         zombieAI = CAST_AI(ZombieAI, zombie->AI());
 
-                    if (killCounter >= counter->GetAmountToSpawn()) // Wave End
+                    if (killCounter >= counter->GetWaveTotalAmount()) // Wave End
                     {
                         ++waveCounter;
                         killCounter = 0; //Reset amount of zombies killed this wave
