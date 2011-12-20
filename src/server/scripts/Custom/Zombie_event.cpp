@@ -76,6 +76,11 @@ enum ZombieEvents
     EVENT_FIRE_CANNON      = 1,
 };
 
+enum ZombieGlobals
+{
+    MAP_ID					= 289,
+};
+
 uint32 const MAX_SPAWNPOINTS = 8;
 Position const ZombieSpawnPoints[MAX_SPAWNPOINTS] =
 {
@@ -776,6 +781,32 @@ class zombie_mod_serverscript : public ServerScript
         }
 };
 
+class zombie_mod_instance : public InstanceMapScript
+{
+    public:
+        zombie_mod_instance() : InstanceMapScript("InstanceScript", MAP_ID) { }
+        
+        struct zombie_mod_InstanceScript : public InstanceScript
+        {
+            zombie_mod_InstanceScript(Map* map) : InstanceScript(map) {}
+        
+            void OnPlayerEnter(Player* player)
+            {
+                if (!player)
+                    return;
+
+                Creature* KillCounterNPC = player->FindNearestCreature(NPC_COUNTER, 200.0f);
+
+                // if the killcounter NPC is near, it's safe to say were in the zombie event, and not in the regular Scholomance instance. hackish but whatever.
+                if (!KillCounterNPC)
+                    return;
+                
+                player->RemoveArenaAuras();
+                player->RemoveArenaSpellCooldowns(true);
+            }
+        };
+};
+
 void AddSC_Zombie_event()
 {
     new npc_zombie();
@@ -791,4 +822,5 @@ void AddSC_Zombie_event()
     new spell_zombie_rapid_fire();
     new npc_zombie_teleporter();
     new zombie_mod_serverscript();
+    new zombie_mod_instance();
 }
