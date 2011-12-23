@@ -76,11 +76,6 @@ enum ZombieEvents
     EVENT_FIRE_CANNON      = 1,
 };
 
-enum ZombieGlobals
-{
-    MAP_ID					= 289,
-};
-
 uint32 const MAX_SPAWNPOINTS = 8;
 Position const ZombieSpawnPoints[MAX_SPAWNPOINTS] =
 {
@@ -97,9 +92,64 @@ Position const ZombieSpawnPoints[MAX_SPAWNPOINTS] =
 uint32 const MAX_TURRETPOINTS = 3;
 Position const TurretPlacePoints[MAX_TURRETPOINTS] = 
 {
-//      {,,,},
-//      {,,,},
-//      {,,,},
+      {133.818314f,178.334167f,95.088676f,2.527592f},
+      {143.015228f,171.581985f,95.386169f,5.095846f},
+      {134.783295f,169.130554f,95.223709f,4.070900f},
+};
+
+class ZombieEvent
+{
+    public:
+
+        void SendMessageToPlayer(Player* player, char* message)
+            {
+                if (!player)
+                    return;
+
+                if (!player->IsInWorld())
+                    return;
+
+                std::string str = "|cFFFFFC00" + std::string(message); // make message yellow
+                WorldPacket data(SMSG_NOTIFICATION, (str.size()+1));
+                data << str;
+                player->GetSession()->SendPacket(&data);
+            }
+
+            void SendMessageToGroup(Player* player, char *message)
+            {
+                if (!player)
+                    return;
+
+                Group* group = player->GetGroup();
+
+                if (!group)
+                    return;
+
+                const Group::MemberSlotList members = group->GetMemberSlots();
+                for (Group::member_citerator citr = members.begin(); citr != members.end(); ++citr)
+                {
+                    Player* plr = ObjectAccessor::FindPlayer(citr->guid);
+                    if (plr && plr->IsInWorld())
+                    {
+                        std::string str = "|cFFFFFC00" + std::string(message); // make message yellow
+                        WorldPacket data(SMSG_NOTIFICATION, (str.size()+1));
+                        data << str;
+                        plr->GetSession()->SendPacket(&data);
+                    }
+                }
+            }
+
+         // Spawn amounts
+        const uint32 GetAmountToSpawn() const { return _AmountToSpawn; }
+        void SetAmountToSpawn(uint32 value) { _AmountToSpawn = value; }
+
+        // Wave total
+        const uint32 GetWaveTotalAmount() const { return _WaveTotal; }
+        void SetWaveTotalAmount(uint32 value) { _WaveTotal = value; }
+
+    private:
+        uint32 _AmountToSpawn;
+        uint32 _WaveTotal;
 };
 
 class npc_zombie : public CreatureScript
@@ -234,6 +284,8 @@ class npc_zombie_spawner : public CreatureScript
             }
  
             uint32 summonTimer;
+            ZombieEvent* global;
+
             bool canSpawn[MAX_SPAWNPOINTS];
  
             void Reset()
@@ -248,13 +300,12 @@ class npc_zombie_spawner : public CreatureScript
  
             void StartSpawningZombies()
             {
-                Counters * counter;
                 for (uint8 i = 0; i < MAX_SPAWNPOINTS; i++)
                 {
                     if (!canSpawn[i])
                         continue;
                     
-                    if (counter->GetAmountToSpawn() <= 0)
+                    if (global->GetAmountToSpawn() <= 0)
                         continue;
  
                     float x = ZombieSpawnPoints[i].GetPositionX() + irand(-4, 4);
@@ -267,7 +318,7 @@ class npc_zombie_spawner : public CreatureScript
                     if (Creature* zombie = me->SummonCreature(NPC_ZOMBIE, x, y, z, ZombieSpawnPoints[i].GetOrientation(), TEMPSUMMON_MANUAL_DESPAWN))
                     {
                         zombie->CastSpell(zombie, SPELL_EMERGE_VISUAL, false);
-                        counter->SetAmountToSpawn(-1);
+                        global->SetAmountToSpawn(global->GetAmountToSpawn() -1);
                     }
                 }
             }
@@ -346,15 +397,15 @@ class npc_zombie_kill_counter : public CreatureScript
 
             uint32 waveCounter;
             uint32 killCounter;
+            ZombieEvent* global;
 
             void Reset()
             {
-                Counters * counter;
                 killCounter = 0;
                 waveCounter = 0;
-                counter->SetWaveTotalAmount(20); // first wave should always start off with 20 zombies.
+                global->SetWaveTotalAmount(20); // first wave should always start off with 20 zombies.
             }
-
+            
             void DespawnTurrets(bool all)
             //void DespawnTurrets(bool all, enum ZombieCreatures Turret)
             {
@@ -387,14 +438,14 @@ class npc_zombie_kill_counter : public CreatureScript
                 if (caster->GetTypeId() == TYPEID_UNIT && spell->Id == SPELL_COUNTER)
                 {
                     ++killCounter;
-                    Counters * counter;
+                    ZombieEvent* global;
                     ZombieAI* zombieAI;
                     Creature* zombie = me->FindNearestCreature(NPC_ZOMBIE, 200.0f, true);
 
                     if (zombie)
                         zombieAI = CAST_AI(ZombieAI, zombie->AI());
 
-                    if (killCounter >= counter->GetWaveTotalAmount()) // Wave End
+                    if (killCounter >= global->GetWaveTotalAmount()) // Wave End
                     {
                         ++waveCounter;
                         killCounter = 0; //Reset amount of zombies killed this wave
@@ -404,13 +455,13 @@ class npc_zombie_kill_counter : public CreatureScript
                         // Amount of zombies we should spawn
                         if (waveCounter <= 5) // we should go easy on the players on wave 5 and under ;)
                         {
-                            counter->SetAmountToSpawn(counter->GetWaveTotalAmount() + ((waveCounter * urand(7,10)) * 2));
-                            counter->SetWaveTotalAmount(counter->GetAmountToSpawn());
+                            global->SetAmountToSpawn(global->GetWaveTotalAmount() + ((waveCounter * urand(7,10)) * 2));
+                            global->SetWaveTotalAmount(global->GetAmountToSpawn());
                         }
                         else
                         {
-                            counter->SetAmountToSpawn(counter->GetWaveTotalAmount() + ((waveCounter * urand(9,12)) * 2));
-                            counter->SetWaveTotalAmount(counter->GetAmountToSpawn());
+                            global->SetAmountToSpawn(global->GetWaveTotalAmount() + ((waveCounter * urand(9,12)) * 2));
+                            global->SetWaveTotalAmount(global->GetAmountToSpawn());
                         }
 
                         if (zombieAI)
@@ -665,22 +716,6 @@ class ZombieEntryCheck
         }
 };
 
-class Counters
-{
-    public:
-        // Spawn amounts
-        const uint32 GetAmountToSpawn() const { return _AmountToSpawn; }
-        void SetAmountToSpawn(uint32 value) { _AmountToSpawn = value; }
-
-        // Wave total
-        const uint32 GetWaveTotalAmount() const { return _WaveTotal; }
-        void SetWaveTotalAmount(uint32 value) { _WaveTotal = value; }
-
-    private:
-        uint32 _AmountToSpawn;
-        uint32 _WaveTotal;
-};
-
 class spell_zombie_rapid_fire : public SpellScriptLoader
 {
     public:
@@ -742,6 +777,7 @@ class npc_zombie_teleporter : public CreatureScript
             player->CLOSE_GOSSIP_MENU();
 
             Group* group = player->GetGroup();
+            ZombieEvent* global;
 
             // If the player disbandon/leaves group during OnGossipHello
             if (!group)
@@ -756,6 +792,7 @@ class npc_zombie_teleporter : public CreatureScript
                         WorldPacket data(MSG_RAID_READY_CHECK, 8);
                         data << player->GetGUID();
                         member->GetSession()->SendPacket(&data);
+                        global->SendMessageToPlayer(player, "[Waiting for group to accept]");
                     }
                 }
 
