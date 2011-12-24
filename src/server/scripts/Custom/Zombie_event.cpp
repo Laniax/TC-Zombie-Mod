@@ -127,41 +127,6 @@ class ZombieEvent
                 Player* player = ObjectAccessor::FindPlayer(citr->guid);
                 if (player && player->IsInWorld())
                 {
-                    std::string str = "|cFFFFFC00" + std::string(message); // make message yellow
-                    WorldPacket data(SMSG_NOTIFICATION, (str.size()+1));
-                    data << str;
-                    plr->GetSession()->SendPacket(&data);
-                }
-            }
-        }
-
-        void SendMessageToPlayer(Player* player, char* message)
-        {
-            if (!player || !player->IsInWorld())
-                return;
-
-            std::string str = "|cFFFFFC00" + std::string(message); // make message yellow
-            WorldPacket data(SMSG_NOTIFICATION, (str.size()+1));
-            data << str;
-            player->GetSession()->SendPacket(&data);
-        }
-
-        void SendMessageToGroup(Player* player, char *message)
-        {
-            if (!player)
-                return;
-
-            Group* group = player->GetGroup();
-
-            if (!group)
-                return;
-
-            const Group::MemberSlotList members = group->GetMemberSlots();
-            for (Group::member_citerator citr = members.begin(); citr != members.end(); ++citr)
-            {
-                Player* player = ObjectAccessor::FindPlayer(citr->guid);
-                if (player && player->IsInWorld())
-                {
                         std::string str = "|cFFFFFC00" + std::string(message); // make message yellow
                         WorldPacket data(SMSG_NOTIFICATION, (str.size()+1));
                         data << str;
