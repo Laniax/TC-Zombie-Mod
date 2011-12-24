@@ -59,10 +59,9 @@ DELETE FROM `spell_script_names` WHERE `ScriptName` IN ('spell_repair_channel','
 INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 (68077,'spell_repair_channel'),(71250,'spell_zombie_rapid_fire');
 
--- Handle spawning of creatures
-/*DELETE FROM `game_event_creture` WHERE `eventEntry` IN (70,-70);
-INSERT INTO `game_event_creature` (`eventEntry`,`guid`) SELECT '-70',`guid` FROM `creature` WHERE `map`=289 AND `guid` < 91428; -- Selects all creatures in Scholomance below guid 91428
-INSERT INTO `game_event_creature` (`eventEntry`,`guid`) SELECT '70',`guid` FROM `creature` WHERE `map`=289 AND `guid` > 91428; -- Selects all creatures in Scholomance above guid 91428*/
+-- Handle visiblity of mobs during Zombie Event
+UPDATE `creature` SET `PhaseMask`=4 WHERE `map`=289 AND `guid` > 91428; -- Selects all creatures in Scholomance above guid 91428
+UPDATE `creature` SET `PhaseMask`=2 WHERE `map`=289 AND `guid` < 91428; -- Selects all creatures in Scholomance below guid 91428
 
 -- Add arrow tag to the Triggers - Infected visual to Cockroaches
 /*DELETE FROM `creature_template_addon` WHERE `entry` IN (792133,792138);

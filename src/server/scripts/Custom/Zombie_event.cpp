@@ -92,9 +92,9 @@ Position const ZombieSpawnPoints[MAX_SPAWNPOINTS] =
 uint32 const MAX_TURRETPOINTS = 3;
 Position const TurretPlacePoints[MAX_TURRETPOINTS] = 
 {
-      {133.818314f, 178.334167f, 95.088676f, 2.527592f},
-      {143.015228f, 171.581985f, 95.386169f, 5.095846f},
-      {134.783295f, 169.130554f, 95.223709f, 4.070900f},
+    {133.818314f, 178.334167f, 95.088676f, 2.527592f},
+    {143.015228f, 171.581985f, 95.386169f, 5.095846f},
+    {134.783295f, 169.130554f, 95.223709f, 4.070900f},
 };
 
 class ZombieEvent

@@ -36,9 +36,11 @@ enum Scholomance
     GO_GATE_RAVENIAN   = 177372,
     GO_GATE_BAROV      = 177373,
     GO_GATE_ILLUCIA    = 177371,
+    MAX_ENCOUNTER      = 2,
+
+    // Zombie Event
     GO_BARRICADE       = 293610,
     GO_ANVIL           = 293611,
-    MAX_ENCOUNTER      = 2,
     NPC_COUNTER        = 792131,
 };
 
@@ -102,7 +104,7 @@ class instance_scholomance : public InstanceMapScript
                 if (Creature* killCounterNPC = player->FindNearestCreature(NPC_COUNTER, 200.0f))
                     zombieEvent = true;
                 else return;
-                
+
                 player->RemoveArenaAuras();
                 player->RemoveArenaSpellCooldowns(true);
             }
@@ -111,8 +113,7 @@ class instance_scholomance : public InstanceMapScript
             {
                 if (zombieEvent)
                 {
-                    // todo
-                    // note to self: add this to zombie event repo, not localhost
+
                 }
             }
 
@@ -120,16 +121,27 @@ class instance_scholomance : public InstanceMapScript
             {
                 switch (go->GetEntry())
                 {
-                    case GO_GATE_KIRTONOS:  GateKirtonosGUID = go->GetGUID(); break;
-                    case GO_GATE_GANDLING:  GateGandlingGUID = go->GetGUID(); break;
-                    case GO_GATE_MALICIA:   GateMiliciaGUID = go->GetGUID(); break;
-                    case GO_GATE_THEOLEN:   GateTheolenGUID = go->GetGUID(); break;
-                    case GO_GATE_POLKELT:   GatePolkeltGUID = go->GetGUID(); break;
-                    case GO_GATE_RAVENIAN:  GateRavenianGUID = go->GetGUID(); break;
-                    case GO_GATE_BAROV:     GateBarovGUID = go->GetGUID(); break;
-                    case GO_GATE_ILLUCIA:   GateIlluciaGUID = go->GetGUID(); break;
-                    case GO_BARRICADE:      BarricadeGUID = go->GetGUID(); break;
-                    case GO_ANVIL:          AnvilGUID = go->GetGUID(); break;
+                    case GO_GATE_KIRTONOS:
+                        GateKirtonosGUID = go->GetGUID();
+                        break;
+                    case GO_GATE_GANDLING:
+                        GateGandlingGUID = go->GetGUID();
+                    case GO_GATE_MALICIA:
+                        GateMiliciaGUID = go->GetGUID();
+                    case GO_GATE_THEOLEN:
+                        GateTheolenGUID = go->GetGUID();
+                    case GO_GATE_POLKELT:
+                        GatePolkeltGUID = go->GetGUID();
+                    case GO_GATE_RAVENIAN:
+                        GateRavenianGUID = go->GetGUID();
+                    case GO_GATE_BAROV:
+                        GateBarovGUID = go->GetGUID();
+                    case GO_GATE_ILLUCIA:
+                        GateIlluciaGUID = go->GetGUID();
+                    case GO_BARRICADE:
+                        BarricadeGUID = go->GetGUID();
+                    case GO_ANVIL:
+                        AnvilGUID = go->GetGUID();
                 }
             }
 
